@@ -1,6 +1,6 @@
 import * as React from "react";
 import { unstable_createRemixStub as createRemixStub } from "@remix-run/testing";
-import { json, redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 import { useActionData, Form } from "@remix-run/react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -21,7 +21,12 @@ function UrlEncoded() {
         {data ? <span data-testid="action-text">{data}</span> : WAITING_VALUE}
       </p>
       <p>
-        <input type="text" defaultValue={SUBMITTED_VALUE} name={FIELD_NAME} />
+        <input
+          title={FIELD_NAME}
+          type="text"
+          defaultValue={SUBMITTED_VALUE}
+          name={FIELD_NAME}
+        />
         <button type="submit" data-testid="submit">
           Go
         </button>
@@ -39,8 +44,8 @@ function RequestText() {
         {data ? <span data-testid="action-text">{data}</span> : WAITING_VALUE}
       </p>
       <p>
-        <input name="a" defaultValue="1" />
-        <input name="b" defaultValue="2" />
+        <input title="a" name="a" defaultValue="1" />
+        <input title="b" name="b" defaultValue="2" />
         <button type="submit" data-testid="submit">
           Go
         </button>
