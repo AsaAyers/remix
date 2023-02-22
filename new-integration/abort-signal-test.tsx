@@ -2,8 +2,8 @@ import * as React from "react";
 import { unstable_createRemixStub as createRemixStub } from "@remix-run/testing";
 import { json } from "@remix-run/node";
 import { useActionData, useLoaderData, Form } from "@remix-run/react";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+
+import { render, screen, waitFor, userEvent } from "./render";
 
 function Index() {
   let actionData = useActionData();

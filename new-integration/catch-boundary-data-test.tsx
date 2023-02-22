@@ -7,8 +7,8 @@ import {
   useMatches,
   Link,
 } from "@remix-run/react";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+
+import { render, screen, waitFor, userEvent } from "./render";
 
 let ROOT_BOUNDARY_TEXT = "ROOT_TEXT" as const;
 let ROOT_BOUNDARY_DATA_ID = "root-boundary-data" as const;

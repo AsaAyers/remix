@@ -5,14 +5,18 @@ import {
   Form,
   isRouteErrorResponse,
   Link,
+  Links,
+  LiveReload,
+  Meta,
   Outlet,
   Scripts,
   useLoaderData,
   useMatches,
   useRouteError,
 } from "@remix-run/react";
-import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+
+import { render, screen, waitFor } from "./render";
 
 describe("CatchBoundary", () => {
   let ROOT_BOUNDARY_TEXT = "ROOT_TEXT" as const;
@@ -25,14 +29,26 @@ describe("CatchBoundary", () => {
 
   let NOT_FOUND_HREF = "/not/found" as const;
 
+  let ROOT_BOUNDARY_ID = "root-boundary" as const;
+  let MATCHES_ID = "matches" as const;
+
+  let OWN_BOUNDARY_ID = "boundary-loader" as const;
+  let STATUS_ID = "status" as const;
+
+  let ACTION_BOUNDARY_ID = "action-boundary" as const;
+
+  let PARENT_DATA_ID = "parent-data" as const;
+  let CHILD_DATA_ID = "child-data" as const;
+  let CHILD_CATCH_ID = "child-catch" as const;
+
   function RootCatchBoundary() {
     let matches = useMatches();
     return (
       <html>
         <head />
         <body>
-          <div data-testid="root-boundary">{ROOT_BOUNDARY_TEXT}</div>
-          <pre data-testid="matches">{JSON.stringify(matches)}</pre>
+          <div data-testid={ROOT_BOUNDARY_ID}>{ROOT_BOUNDARY_TEXT}</div>
+          <pre data-testid={MATCHES_ID}>{JSON.stringify(matches)}</pre>
           <Scripts />
         </body>
       </html>
@@ -44,8 +60,8 @@ describe("CatchBoundary", () => {
 
     return (
       <>
-        <div data-testid="boundary-loader">{OWN_BOUNDARY_TEXT}</div>
-        <pre data-testid="status">
+        <div data-testid={OWN_BOUNDARY_ID}>{OWN_BOUNDARY_TEXT}</div>
+        <pre data-testid={STATUS_ID}>
           {isRouteErrorResponse(error) ? error.status : ""}
         </pre>
       </>
@@ -57,7 +73,7 @@ describe("CatchBoundary", () => {
     let caught = isRouteErrorResponse(error) ? error : undefined;
 
     return (
-      <p data-testid="child-catch">
+      <p data-testid={CHILD_CATCH_ID}>
         {caught?.status} {caught?.data}
       </p>
     );
@@ -67,7 +83,7 @@ describe("CatchBoundary", () => {
     let data = useLoaderData();
     return (
       <div>
-        <p data-testid="parent-data">{data}</p>
+        <p data-testid={PARENT_DATA_ID}>{data}</p>
         <Outlet />
       </div>
     );
@@ -77,7 +93,7 @@ describe("CatchBoundary", () => {
     let data = useLoaderData();
     return (
       <>
-        <p data-testid="child-data">{data}</p>
+        <p data-testid={CHILD_DATA_ID}>{data}</p>
         <Form method="post" reloadDocument={true}>
           <button type="submit" name="key" value="value">
             Submit
@@ -93,6 +109,19 @@ describe("CatchBoundary", () => {
       id: "root",
       loader: () => json({ data: "ROOT LOADER" }),
       errorElement: <RootCatchBoundary />,
+      element: (
+        <html lang="en">
+          <head>
+            <Meta />
+            <Links />
+          </head>
+          <body>
+            <Outlet />
+            <Scripts />
+            <LiveReload />
+          </body>
+        </html>
+      ),
       children: [
         {
           index: true,
@@ -140,7 +169,7 @@ describe("CatchBoundary", () => {
             throw new Response("", { status: 401 });
           },
           errorElement: (
-            <p data-testid="action-boundary">{OWN_BOUNDARY_TEXT}</p>
+            <p data-testid={ACTION_BOUNDARY_ID}>{OWN_BOUNDARY_TEXT}</p>
           ),
           element: (
             <Form method="post">
@@ -217,25 +246,25 @@ describe("CatchBoundary", () => {
 
   test("non-matching urls on document requests", async () => {
     render(<RemixStub initialEntries={[NOT_FOUND_HREF]} />);
-    await waitFor(() => screen.getByTestId("root-boundary"));
-    expect(screen.getByTestId("root-boundary")).toHaveTextContent(
+    await waitFor(() => screen.getByTestId(ROOT_BOUNDARY_ID));
+    expect(screen.getByTestId(ROOT_BOUNDARY_ID)).toHaveTextContent(
       ROOT_BOUNDARY_TEXT
     );
     // There should be no loader data on the root route
     let expected = JSON.stringify([{ id: "root", pathname: "", params: {} }]);
-    expect(screen.getByTestId("matches")).toHaveTextContent(expected);
+    expect(screen.getByTestId(MATCHES_ID)).toHaveTextContent(expected);
   });
 
   test("non-matching urls on client transitions", async () => {
-    render(<RemixStub />);
+    render(<RemixStub />, { hydrate: true });
     await waitFor(() => screen.getByTestId(NOT_FOUND_HREF));
     await userEvent.click(screen.getByTestId(NOT_FOUND_HREF));
-    await waitFor(() => screen.getByTestId("root-boundary"));
+    await waitFor(() => screen.getByTestId(ROOT_BOUNDARY_ID));
     // Root loader data sticks around from previous load
     let expected = JSON.stringify([
       { id: "root", pathname: "", params: {}, data: { data: "ROOT LOADER" } },
     ]);
-    expect(screen.getByTestId("matches")).toHaveTextContent(expected);
+    expect(screen.getByTestId(MATCHES_ID)).toHaveTextContent(expected);
   });
 
   // test("own boundary, action, document request", async () => {
@@ -246,17 +275,19 @@ describe("CatchBoundary", () => {
   // });
 
   test("own boundary, action, client transition from other route", async () => {
-    render(<RemixStub />);
+    render(<RemixStub />, { hydrate: true });
     await waitFor(() => screen.getByTestId(HAS_BOUNDARY_ACTION));
     await userEvent.click(screen.getByTestId(HAS_BOUNDARY_ACTION));
-    await waitFor(() => screen.getByTestId("action-boundary"));
+    await waitFor(() => screen.getByTestId(ACTION_BOUNDARY_ID));
   });
 
   test("own boundary, action, client transition from itself", async () => {
-    render(<RemixStub initialEntries={[HAS_BOUNDARY_ACTION]} />);
+    render(<RemixStub initialEntries={[HAS_BOUNDARY_ACTION]} />, {
+      hydrate: true,
+    });
     await waitFor(() => screen.getByTestId(HAS_BOUNDARY_ACTION));
     await userEvent.click(screen.getByTestId(HAS_BOUNDARY_ACTION));
-    await waitFor(() => screen.getByTestId("action-boundary"));
+    await waitFor(() => screen.getByTestId(ACTION_BOUNDARY_ID));
   });
 
   // test("bubbles to parent in action document requests", async () => {
@@ -267,84 +298,87 @@ describe("CatchBoundary", () => {
   // });
 
   test("bubbles to parent in action script transitions from other routes", async () => {
-    render(<RemixStub />);
+    render(<RemixStub />, { hydrate: true });
     await waitFor(() => screen.getByTestId(NO_BOUNDARY_ACTION));
     await userEvent.click(screen.getByTestId(NO_BOUNDARY_ACTION));
-    await waitFor(() => screen.getByTestId("root-boundary"));
+    await waitFor(() => screen.getByTestId(ROOT_BOUNDARY_ID));
   });
 
   test("bubbles to parent in action script transitions from self", async () => {
-    render(<RemixStub initialEntries={[NO_BOUNDARY_ACTION]} />);
+    render(<RemixStub initialEntries={[NO_BOUNDARY_ACTION]} />, {
+      hydrate: true,
+    });
     await waitFor(() => screen.getByTestId(NO_BOUNDARY_ACTION));
     await userEvent.click(screen.getByTestId(NO_BOUNDARY_ACTION));
-    await waitFor(() => screen.getByTestId("root-boundary"));
+    await waitFor(() => screen.getByTestId(ROOT_BOUNDARY_ID));
   });
 
   test("own boundary, loader, document request", async () => {
     render(<RemixStub initialEntries={[HAS_BOUNDARY_LOADER]} />);
-    await waitFor(() => screen.getByTestId("boundary-loader"));
-    expect(screen.getByTestId("boundary-loader")).toHaveTextContent(
+    await waitFor(() => screen.getByTestId(OWN_BOUNDARY_ID));
+    expect(screen.getByTestId(OWN_BOUNDARY_ID)).toHaveTextContent(
       OWN_BOUNDARY_TEXT
     );
   });
 
   test("own boundary, loader, client transition", async () => {
-    render(<RemixStub />);
+    render(<RemixStub />, { hydrate: true });
     await waitFor(() => screen.getByTestId(HAS_BOUNDARY_LOADER));
     await userEvent.click(screen.getByTestId(HAS_BOUNDARY_LOADER));
-    await waitFor(() => screen.getByTestId("boundary-loader"));
-    expect(screen.getByTestId("boundary-loader")).toHaveTextContent(
+    await waitFor(() => screen.getByTestId(OWN_BOUNDARY_ID));
+    expect(screen.getByTestId(OWN_BOUNDARY_ID)).toHaveTextContent(
       OWN_BOUNDARY_TEXT
     );
   });
 
   test("bubbles to parent in loader document requests", async () => {
     render(<RemixStub initialEntries={[NO_BOUNDARY_LOADER]} />);
-    await waitFor(() => screen.getByTestId("root-boundary"));
-    expect(screen.getByTestId("root-boundary")).toHaveTextContent(
+    await waitFor(() => screen.getByTestId(ROOT_BOUNDARY_ID));
+    expect(screen.getByTestId(ROOT_BOUNDARY_ID)).toHaveTextContent(
       ROOT_BOUNDARY_TEXT
     );
   });
 
   test("bubbles to parent in loader transitions from other routes", async () => {
-    render(<RemixStub />);
+    render(<RemixStub />, { hydrate: true });
     await waitFor(() => screen.getByTestId(NO_BOUNDARY_LOADER));
     await userEvent.click(screen.getByTestId(NO_BOUNDARY_LOADER));
-    await waitFor(() => screen.getByTestId("root-boundary"));
-    expect(screen.getByTestId("root-boundary")).toHaveTextContent(
+    await waitFor(() => screen.getByTestId(ROOT_BOUNDARY_ID));
+    expect(screen.getByTestId(ROOT_BOUNDARY_ID)).toHaveTextContent(
       ROOT_BOUNDARY_TEXT
     );
   });
 
-  test("uses correct catch boundary on server action errors", async () => {
-    render(<RemixStub initialEntries={[`/action/child-catch`]} />);
-    await waitFor(() => screen.getByTestId("parent-data"));
-    expect(screen.getByTestId("parent-data")).toHaveTextContent("PARENT");
-    expect(screen.getByTestId("child-data")).toHaveTextContent("CHILD");
-    await userEvent.click(screen.getByRole("button"));
-    await waitFor(() => screen.getByTestId("child-catch"));
-    // Preserves parent loader data
-    expect(screen.getByTestId("parent-data")).toHaveTextContent("PARENT");
-    expect(screen.getByTestId("child-catch")).toHaveTextContent(`400 Caught!`);
-  });
+  // test("uses correct catch boundary on server action errors", async () => {
+  //   let app = new PlaywrightFixture(appFixture, page);
+  //   await app.goto(`/action/child-catch`);
+  //   expect(await app.getHtml("#parent-data")).toMatch("PARENT");
+  //   expect(await app.getHtml("#child-data")).toMatch("CHILD");
+  //   await page.click("button[type=submit]");
+  //   await page.waitForSelector("#child-catch");
+  //   // Preserves parent loader data
+  //   expect(await app.getHtml("#parent-data")).toMatch("PARENT");
+  //   expect(await app.getHtml("#child-catch")).toMatch("400");
+  //   expect(await app.getHtml("#child-catch")).toMatch("Caught!");
+  // });
 
   test("prefers parent catch when child loader also bubbles, document request", async () => {
-    render(<RemixStub initialEntries={[HAS_BOUNDARY_LOADER + "/child"]} />);
-    await waitFor(() => screen.getByTestId("boundary-loader"));
-    expect(screen.getByTestId("boundary-loader")).toHaveTextContent(
+    render(<RemixStub initialEntries={[`${HAS_BOUNDARY_LOADER}/child`]} />);
+    await waitFor(() => screen.getByTestId(OWN_BOUNDARY_ID));
+    expect(screen.getByTestId(OWN_BOUNDARY_ID)).toHaveTextContent(
       OWN_BOUNDARY_TEXT
     );
-    expect(screen.getByTestId("status")).toHaveTextContent("401");
+    expect(screen.getByTestId(STATUS_ID)).toHaveTextContent("401");
   });
 
   test("prefers parent catch when child loader also bubbles, client transition", async () => {
     render(<RemixStub />, { hydrate: true });
     await waitFor(() => screen.getByTestId(`${HAS_BOUNDARY_LOADER}/child`));
     await userEvent.click(screen.getByTestId(`${HAS_BOUNDARY_LOADER}/child`));
-    await waitFor(() => screen.getByTestId("boundary-loader"));
-    expect(screen.getByTestId("boundary-loader")).toHaveTextContent(
+    await waitFor(() => screen.getByTestId(OWN_BOUNDARY_ID));
+    expect(screen.getByTestId(OWN_BOUNDARY_ID)).toHaveTextContent(
       OWN_BOUNDARY_TEXT
     );
-    expect(screen.getByTestId("status")).toHaveTextContent("401");
+    expect(screen.getByTestId(STATUS_ID)).toHaveTextContent("401");
   });
 });

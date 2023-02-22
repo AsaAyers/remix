@@ -2,8 +2,8 @@ import * as React from "react";
 import { unstable_createRemixStub as createRemixStub } from "@remix-run/testing";
 import { redirect } from "@remix-run/node";
 import { useActionData, Form } from "@remix-run/react";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+
+import { render, screen, waitFor, userEvent } from "./render";
 
 let FIELD_NAME = "message";
 let WAITING_VALUE = "Waiting...";
@@ -135,19 +135,6 @@ describe("actions", () => {
   // });
 
   test("redirects a thrown response on script transitions", async () => {
-    // let app = new PlaywrightFixture(appFixture, page);
-    // await app.goto(`/${THROWS_REDIRECT}`);
-    // let responses = app.collectDataResponses();
-    // await app.clickSubmitButton(`/${THROWS_REDIRECT}`);
-
-    // await page.waitForSelector(`#${REDIRECT_TARGET}`);
-
-    // expect(responses.length).toBe(1);
-    // expect(responses[0].status()).toBe(204);
-
-    // expect(new URL(page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
-    // expect(await app.getHtml()).toMatch(PAGE_TEXT);
-
     render(<RemixStub initialEntries={[`/${THROWS_REDIRECT}`]} />);
 
     await waitFor(() => screen.getByRole("button"));
